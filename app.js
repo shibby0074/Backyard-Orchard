@@ -107,9 +107,11 @@ async function photoDelete(id){let d=await pdb();await new Promise((ok,no)=>{let
 function camera(){if(sel==null)return;photoPlantId=sel;$('cameraInput').click()}
 async function gallery(){if(sel==null)return;photoPlantId=sel;let p=data.find(x=>x.id===sel);$('photoTitle').textContent=(p?p.name:'Plant')+' — Progress';$('photoModal').classList.add('open');await galleryRender()}
 async function galleryRender(){photoUrls.forEach(URL.revokeObjectURL);photoUrls=[];let rows=await photoGet(photoPlantId),g=$('photoGrid');g.innerHTML='';$('viewPhotos').textContent='🖼 Photos ('+rows.length+')';if(!rows.length){g.innerHTML='<div style="padding:25px;color:#68766b">No photos yet. Tap Take Photo to start.</div>';return}rows.forEach(r=>{let u=URL.createObjectURL(r.blob);photoUrls.push(u);let d=new Date(r.taken),c=document.createElement('div');c.className='photoCard';c.innerHTML='<img alt="Tree progress photo"><div class="photoMeta"><b>'+d.toLocaleDateString()+'</b><br>'+d.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})+'</div><button data-pdel="'+r.id+'">Delete</button>';c.querySelector('img').src=u;g.appendChild(c)})}
-$('viewPhotos').onclick=gallery;$('closePhotos').onclick=()=>{$('photoModal').classList.remove('open')};$('photoModal').onclick=e=>{if(e.target===$('photoModal'))$('photoModal').classList.remove('open')};
-$('cameraInput').onchange=async e=>{let f=e.target.files&&e.target.files[0];if(!f||photoPlantId==null)return;await photoAdd(photoPlantId,f);e.target.value='';if($('photoModal').classList.contains('open'))await galleryRender();else{$('saved').textContent='Photo saved ✓';let rows=await photoGet(photoPlantId);$('viewPhotos').textContent='🖼 Photos ('+rows.length+')'}};
-$('photoGrid').onclick=async e=>{let id=e.target.dataset&&e.target.dataset.pdel;if(id&&confirm('Delete this photo?')){await photoDelete(+id);await galleryRender()}};
+if($('viewPhotos')) $('viewPhotos').onclick=gallery;
+if($('closePhotos')) $('closePhotos').onclick=()=>{$('photoModal').classList.remove('open')};
+if($('photoModal')) $('photoModal').onclick=e=>{if(e.target===$('photoModal'))$('photoModal').classList.remove('open')};
+if($('cameraInput')) $('cameraInput').onchange=async e=>{let f=e.target.files&&e.target.files[0];if(!f||photoPlantId==null)return;await photoAdd(photoPlantId,f);e.target.value='';if($('photoModal').classList.contains('open'))await galleryRender();else{$('saved').textContent='Photo saved ✓';let rows=await photoGet(photoPlantId);$('viewPhotos').textContent='🖼 Photos ('+rows.length+')'}};
+if($('photoGrid')) $('photoGrid').onclick=async e=>{let id=e.target.dataset&&e.target.dataset.pdel;if(id&&confirm('Delete this photo?')){await photoDelete(+id);await galleryRender()}};
 
 load();save();render();transform();if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});
 })();
