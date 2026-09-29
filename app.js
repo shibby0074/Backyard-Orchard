@@ -1,7 +1,7 @@
 (function(){
 window.addEventListener('error',function(e){var x=document.getElementById('saved');if(x){x.textContent='App error: '+(e.message||'unknown');x.style.color='#b00020';}});
 
-const KEY='orchardPWA_v3_state',OLD='orchardPWA_v2_state',C={planted:'#2f7d37',pending:'#eb9119',purchase:'#cd2d2d',blue:'#357ab8',purple:'#7a4aa0'};
+const KEY='orchardPWA_v34_state',OLD='orchardPWA_v3_state',C={planted:'#2f7d37',pending:'#eb9119',purchase:'#cd2d2d',blue:'#357ab8',purple:'#7a4aa0'};
 const master=window.MASTER,$=id=>document.getElementById(id);let data,sel=null,layer='current',growth='pruned',view='planner',labels=true,history=[],future=[],nextId=1000,dfN=1,caneN=1,measure=false,measurePts=[];let zoom=1,panX=0,panY=0,pointers=new Map(),lastDist=0,lastMid=null,dragId=null;
 const svg=$('yard'),vp=$('viewport'),sh=$('shapes'),pp=$('plants'),ll=$('labelsLayer'),ml=$('measureLayer');const F=['nm','shape','cat','xx','yy','vars','pc','p1','p2','p3','nc','n1','n2','n3','lock','notes'].reduce((o,k)=>(o[k]=$(k),o),{});const clone=x=>JSON.parse(JSON.stringify(x)),keys=['current','y1','y2','y3'];
 function migrate(old){if(!Array.isArray(old))return clone(master);return old.map(p=>{let b=master.find(m=>m.name===p.name)||{},pr=p.pruned||p.canopy||b.pruned||{current:3,y1:5,y2:7,y3:9},nat=p.natural||b.natural||Object.fromEntries(keys.map(k=>[k,Math.max(pr[k]||3,(pr[k]||3)*1.4)]));return {...b,...p,shape:p.shape||b.shape||'tree',pruned:pr,natural:nat,varieties:p.varieties||b.varieties||[]}})}
