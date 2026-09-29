@@ -8,44 +8,86 @@ function migrate(old){if(!Array.isArray(old))return clone(master);return old.map
 function load(){try{let v=localStorage.getItem(KEY);if(v)data=migrate(JSON.parse(v));else{let o=localStorage.getItem(OLD);data=o?migrate(JSON.parse(o)):clone(master)}}catch(e){data=clone(master)};nextId=Math.max(1000,...data.map(p=>+p.id||0))+1;dfN=data.filter(p=>/^Dragon Fruit Trellis/.test(p.name)).length+1;caneN=data.filter(p=>/^Sugarcane/.test(p.name)).length+1}
 function save(){localStorage.setItem(KEY,JSON.stringify(data));$('saved').textContent='Saved ✓'}function snap(){history.push(JSON.stringify(data));if(history.length>50)history.shift();future=[]}function S(t,a={}){let n=document.createElementNS('http://www.w3.org/2000/svg',t);Object.entries(a).forEach(([k,v])=>n.setAttribute(k,v));return n}function clear(n){while(n.firstChild)n.removeChild(n.firstChild)}function size(p){return +((p[growth]&&p[growth][layer])||3)}
 function visualTree(p,col,d){
- let g=S('g'), seed=String(p.name).split('').reduce((a,c)=>a+c.charCodeAt(0),0);
- function rand(i){let x=Math.sin(seed+i*91.733)*43758.5453;return x-Math.floor(x)}
- function leaf(cx,cy,rx,ry,fill,op){g.appendChild(S('ellipse',{cx,cy,rx,ry,fill,opacity:op||1,class:'visualLeaf'}))}
- // soft aerial shadow
- g.appendChild(S('ellipse',{cx:p.x+.18,cy:p.y+.28,rx:d*.48,ry:d*.44,fill:'#183d20',opacity:'.18'}));
- let name=p.name.toLowerCase();
- if(name.includes('papaya')){
-   g.appendChild(S('circle',{cx:p.x,cy:p.y,r:Math.max(.18,d*.06),fill:'#8a623d'}));
-   for(let i=0;i<11;i++){let a=i*Math.PI*2/11, len=d*(.32+.08*rand(i));let x=p.x+Math.cos(a)*len*.55,y=p.y+Math.sin(a)*len*.55;
-     g.appendChild(S('line',{x1:p.x,y1:p.y,x2:x,y2:y,stroke:'#4e7c3c','stroke-width':'.10'}));
-     for(let j=-1;j<=1;j++){let aa=a+j*.24;leaf(x+Math.cos(aa)*d*.10,y+Math.sin(aa)*d*.10,d*.12,d*.045,'#5e9b47',.95)}
-   }
-   for(let i=0;i<4;i++)g.appendChild(S('circle',{cx:p.x+(i-1.5)*.12,cy:p.y+.16,r:.10,fill:'#d8a33d'}));
-   return g;
- }
- if(name.includes('blueberry')){
-   for(let i=0;i<16;i++){let a=rand(i)*Math.PI*2,r=rand(i+20)*d*.32;leaf(p.x+Math.cos(a)*r,p.y+Math.sin(a)*r,d*.12,d*.08,i%3===0?'#386f3f':'#55904d',.95)}
-   for(let i=0;i<9;i++){let a=rand(i+50)*Math.PI*2,r=rand(i+70)*d*.28;g.appendChild(S('circle',{cx:p.x+Math.cos(a)*r,cy:p.y+Math.sin(a)*r,r:.07,fill:'#394b78'}))}
-   return g;
- }
- // Species-specific palette and crown character
- let pal=['#376f39','#4c8745','#669c55','#2f6134'];
- if(name.includes('mango')) pal=['#245d31','#36783a','#4b8b43','#1f512c'];
- else if(name.includes('atemoya')||name.includes('cherilata')) pal=['#4b8247','#6a9b58','#83ad69','#3f733f'];
- else if(name.includes('guava')) pal=['#478347','#61995a','#79a96a','#376f3d'];
- else if(name.includes('mamey')) pal=['#285f35','#397740','#528b4b','#214f2d'];
- else if(name.includes('sapote')) pal=['#356f3b','#4d8649','#6a9c58','#2a6035'];
- let count=Math.max(12,Math.min(34,Math.round(d*1.8)));
- // irregular outer crown
- for(let i=0;i<count;i++){let a=rand(i)*Math.PI*2,r=Math.sqrt(rand(i+40))*d*.39,sz=d*(.105+.055*rand(i+80));leaf(p.x+Math.cos(a)*r,p.y+Math.sin(a)*r,sz,sz*(.78+.2*rand(i+100)),pal[i%pal.length],.97)}
- // center crown volume/highlights
- for(let i=0;i<Math.max(6,Math.round(count*.4));i++){let a=rand(i+130)*Math.PI*2,r=rand(i+160)*d*.22,sz=d*(.09+.04*rand(i+190));leaf(p.x+Math.cos(a)*r,p.y+Math.sin(a)*r,sz,sz*.8,pal[(i+1)%pal.length],.92)}
- // tiny branch/trunk glimpse
- g.appendChild(S('circle',{cx:p.x,cy:p.y,r:Math.max(.10,d*.025),fill:'#72543a',opacity:'.8'}));
- // restrained fruit cues
- let fruitColor=name.includes('mango')?'#e5a63b':name.includes('guava')?'#9ec65d':name.includes('mamey')?'#9a6337':name.includes('atemoya')||name.includes('cherilata')?'#9dbd6c':null;
- if(fruitColor)for(let i=0;i<Math.min(7,Math.max(2,Math.round(d/3)));i++){let a=rand(i+230)*Math.PI*2,r=rand(i+260)*d*.28;g.appendChild(S('circle',{cx:p.x+Math.cos(a)*r,cy:p.y+Math.sin(a)*r,r:Math.max(.06,d*.012),fill:fruitColor,opacity:'.9'}))}
- return g
+  let g=S('g'), seed=String(p.name).split('').reduce((a,c)=>a+c.charCodeAt(0),0);
+  function rnd(i){let x=Math.sin(seed+i*127.17)*43758.5453;return x-Math.floor(x)}
+  function polar(a,r){return [p.x+Math.cos(a)*r,p.y+Math.sin(a)*r]}
+  function blobPath(scale,bumps,phase){
+    let pts=[];
+    for(let i=0;i<bumps;i++){
+      let a=-Math.PI/2+i*Math.PI*2/bumps;
+      let rr=scale*(.84+.16*rnd(i+phase));
+      pts.push(polar(a,rr));
+    }
+    let path="";
+    for(let i=0;i<pts.length;i++){
+      let prev=pts[(i-1+pts.length)%pts.length],cur=pts[i],next=pts[(i+1)%pts.length];
+      let sx=(prev[0]+cur[0])/2, sy=(prev[1]+cur[1])/2;
+      let ex=(cur[0]+next[0])/2, ey=(cur[1]+next[1])/2;
+      path+=(i===0?`M${sx} ${sy}`:"")+` Q${cur[0]} ${cur[1]} ${ex} ${ey}`;
+    }
+    return path+" Z";
+  }
+  function path(dv,fill,stroke,sw,op){g.appendChild(S('path',{d:dv,fill,stroke:stroke||'none','stroke-width':sw||0,opacity:op==null?1:op,'stroke-linejoin':'round'}))}
+  function vein(x1,y1,x2,y2,stroke,sw,op){g.appendChild(S('line',{x1,y1,x2,y2,stroke,'stroke-width':sw,opacity:op||1,'stroke-linecap':'round'}))}
+  let n=p.name.toLowerCase();
+
+  // Papaya: unmistakable starburst crown from directly overhead.
+  if(n.includes('papaya')){
+    g.appendChild(S('ellipse',{cx:p.x+.16,cy:p.y+.20,rx:d*.43,ry:d*.40,fill:'#173e24',opacity:'.16'}));
+    for(let i=0;i<10;i++){
+      let a=-Math.PI/2+i*Math.PI*2/10, L=d*(.35+.035*rnd(i));
+      let bx=p.x+Math.cos(a)*L*.36, by=p.y+Math.sin(a)*L*.36;
+      vein(p.x,p.y,bx,by,'#5d7d3f',Math.max(.07,d*.014),.95);
+      // five-lobed cartoon leaf silhouette
+      let tip=polar(a,L*.49), left=polar(a-.22,L*.35), right=polar(a+.22,L*.35);
+      let dleaf=`M${bx} ${by} Q${left[0]} ${left[1]} ${tip[0]} ${tip[1]} Q${right[0]} ${right[1]} ${bx} ${by} Z`;
+      path(dleaf,i%2?'#4f9749':'#67aa55','#2d7138',.055,.98);
+      vein(bx,by,tip[0],tip[1],'#d0d98c',.035,.6);
+    }
+    g.appendChild(S('circle',{cx:p.x,cy:p.y,r:Math.max(.14,d*.035),fill:'#8c6538',stroke:'#634528','stroke-width':'.04'}));
+    for(let i=0;i<4;i++){let a=i*Math.PI/2+.3,q=polar(a,d*.07);g.appendChild(S('ellipse',{cx:q[0],cy:q[1],rx:d*.025,ry:d*.04,fill:'#e1a23a',stroke:'#b06f24','stroke-width':'.025'}))}
+    return g;
+  }
+
+  // Blueberry: low, compact shrub rather than a tree crown.
+  if(n.includes('blueberry')){
+    path(blobPath(d*.44,18,10),'#397a43','#235d31',.08,1);
+    for(let i=0;i<18;i++){let a=rnd(i+30)*Math.PI*2,r=Math.sqrt(rnd(i+50))*d*.32,q=polar(a,r);
+      g.appendChild(S('ellipse',{cx:q[0],cy:q[1],rx:d*.055,ry:d*.035,fill:i%3?'#63a054':'#82b36a',transform:`rotate(${Math.round(a*180/Math.PI)} ${q[0]} ${q[1]})`}));
+    }
+    for(let i=0;i<10;i++){let a=rnd(i+80)*Math.PI*2,r=Math.sqrt(rnd(i+100))*d*.30,q=polar(a,r);g.appendChild(S('circle',{cx:q[0],cy:q[1],r:Math.max(.045,d*.016),fill:'#3f4f83',stroke:'#28355f','stroke-width':'.025'}))}
+    return g;
+  }
+
+  let pal=['#3f7f3f','#57924a','#70a65a','#2f6b35'];
+  let outline='#23592e',lobes=20;
+  if(n.includes('mango')){pal=['#1f5a2d','#2e7135','#448640','#5a9848'];outline='#174723';lobes=24}
+  else if(n.includes('atemoya')||n.includes('cherilata')){pal=['#4e8547','#68a057','#80b267','#3b743d'];outline='#315f34';lobes=17}
+  else if(n.includes('guava')){pal=['#448246','#61a057','#7bb36b','#34703b'];outline='#285d32';lobes=18}
+  else if(n.includes('mamey')){pal=['#245d31','#34733a','#4b8844','#1d4e29'];outline='#153f22';lobes=22}
+  else if(n.includes('sapote')){pal=['#306d39','#498448','#659b56','#275f33'];outline='#204e2b';lobes=20}
+
+  // One continuous scalloped crown silhouette — not a collection of circles.
+  path(blobPath(d*.49,lobes,5),pal[0],outline,Math.max(.07,d*.012),1);
+  // broad painted shadow/highlight masses contained visually inside crown
+  for(let i=0;i<7;i++){
+    let a=rnd(i+120)*Math.PI*2,r=Math.sqrt(rnd(i+140))*d*.24,q=polar(a,r);
+    let rx=d*(.10+.045*rnd(i+160)), ry=rx*(.65+.2*rnd(i+180));
+    g.appendChild(S('ellipse',{cx:q[0],cy:q[1],rx,ry,fill:pal[(i%3)+1],opacity:'.72',transform:`rotate(${Math.round(rnd(i+200)*180)} ${q[0]} ${q[1]})`}));
+  }
+  // hand-drawn leaf strokes for recognizable foliage texture
+  for(let i=0;i<20;i++){
+    let a=rnd(i+220)*Math.PI*2,r=Math.sqrt(rnd(i+250))*d*.34,q=polar(a,r),ang=rnd(i+280)*Math.PI*2,L=d*(.045+.018*rnd(i+300));
+    let x2=q[0]+Math.cos(ang)*L,y2=q[1]+Math.sin(ang)*L;
+    vein(q[0],q[1],x2,y2,'#b7cf88',Math.max(.025,d*.004),.45);
+  }
+  // trunk/branch glimpses at center
+  for(let i=0;i<4;i++){let a=i*Math.PI/2+.45+rnd(i+330)*.5,q=polar(a,d*.12);vein(p.x,p.y,q[0],q[1],'#75563a',Math.max(.045,d*.008),.58)}
+  g.appendChild(S('circle',{cx:p.x,cy:p.y,r:Math.max(.09,d*.018),fill:'#735238',opacity:'.8'}));
+
+  let fruit=n.includes('mango')?'#f0b13e':n.includes('guava')?'#b9d56b':n.includes('mamey')?'#a86e3c':(n.includes('atemoya')||n.includes('cherilata'))?'#a7c978':null;
+  if(fruit)for(let i=0;i<Math.min(8,Math.max(2,Math.round(d/3)));i++){let a=rnd(i+350)*Math.PI*2,r=Math.sqrt(rnd(i+370))*d*.30,q=polar(a,r);g.appendChild(S('ellipse',{cx:q[0],cy:q[1],rx:Math.max(.05,d*.012),ry:Math.max(.065,d*.016),fill:fruit,stroke:'#6d6a37','stroke-width':'.02'}))}
+  return g;
 }
 function drawShape(p){
  let col=C[p.cat]||C.blue,d=size(p);
