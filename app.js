@@ -8,121 +8,79 @@ function migrate(old){if(!Array.isArray(old))return clone(master);return old.map
 function load(){try{let v=localStorage.getItem(KEY);if(v)data=migrate(JSON.parse(v));else{let o=localStorage.getItem(OLD);data=o?migrate(JSON.parse(o)):clone(master)}}catch(e){data=clone(master)};nextId=Math.max(1000,...data.map(p=>+p.id||0))+1;dfN=data.filter(p=>/^Dragon Fruit Trellis/.test(p.name)).length+1;caneN=data.filter(p=>/^Sugarcane/.test(p.name)).length+1}
 function save(){localStorage.setItem(KEY,JSON.stringify(data));$('saved').textContent='Saved ✓'}function snap(){history.push(JSON.stringify(data));if(history.length>50)history.shift();future=[]}function S(t,a={}){let n=document.createElementNS('http://www.w3.org/2000/svg',t);Object.entries(a).forEach(([k,v])=>n.setAttribute(k,v));return n}function clear(n){while(n.firstChild)n.removeChild(n.firstChild)}function size(p){return +((p[growth]&&p[growth][layer])||3)}
 function visualTree(p,col,d){
-  let g=S('g'), seed=String(p.name).split('').reduce((a,c)=>a+c.charCodeAt(0),0);
-  function rnd(i){let x=Math.sin(seed+i*127.17)*43758.5453;return x-Math.floor(x)}
-  function polar(a,r){return [p.x+Math.cos(a)*r,p.y+Math.sin(a)*r]}
-  function blobPath(scale,bumps,phase){
-    let pts=[];
-    for(let i=0;i<bumps;i++){
-      let a=-Math.PI/2+i*Math.PI*2/bumps;
-      let rr=scale*(.84+.16*rnd(i+phase));
-      pts.push(polar(a,rr));
-    }
-    let path="";
-    for(let i=0;i<pts.length;i++){
-      let prev=pts[(i-1+pts.length)%pts.length],cur=pts[i],next=pts[(i+1)%pts.length];
-      let sx=(prev[0]+cur[0])/2, sy=(prev[1]+cur[1])/2;
-      let ex=(cur[0]+next[0])/2, ey=(cur[1]+next[1])/2;
-      path+=(i===0?`M${sx} ${sy}`:"")+` Q${cur[0]} ${cur[1]} ${ex} ${ey}`;
-    }
-    return path+" Z";
-  }
-  function path(dv,fill,stroke,sw,op){g.appendChild(S('path',{d:dv,fill,stroke:stroke||'none','stroke-width':sw||0,opacity:op==null?1:op,'stroke-linejoin':'round'}))}
-  function vein(x1,y1,x2,y2,stroke,sw,op){g.appendChild(S('line',{x1,y1,x2,y2,stroke,'stroke-width':sw,opacity:op||1,'stroke-linecap':'round'}))}
-  let n=p.name.toLowerCase();
-
-  // Papaya: unmistakable starburst crown from directly overhead.
-  if(n.includes('papaya')){
-    g.appendChild(S('ellipse',{cx:p.x+.16,cy:p.y+.20,rx:d*.43,ry:d*.40,fill:'#173e24',opacity:'.16'}));
-    for(let i=0;i<10;i++){
-      let a=-Math.PI/2+i*Math.PI*2/10, L=d*(.35+.035*rnd(i));
-      let bx=p.x+Math.cos(a)*L*.36, by=p.y+Math.sin(a)*L*.36;
-      vein(p.x,p.y,bx,by,'#5d7d3f',Math.max(.07,d*.014),.95);
-      // five-lobed cartoon leaf silhouette
-      let tip=polar(a,L*.49), left=polar(a-.22,L*.35), right=polar(a+.22,L*.35);
-      let dleaf=`M${bx} ${by} Q${left[0]} ${left[1]} ${tip[0]} ${tip[1]} Q${right[0]} ${right[1]} ${bx} ${by} Z`;
-      path(dleaf,i%2?'#4f9749':'#67aa55','#2d7138',.055,.98);
-      vein(bx,by,tip[0],tip[1],'#d0d98c',.035,.6);
-    }
-    g.appendChild(S('circle',{cx:p.x,cy:p.y,r:Math.max(.14,d*.035),fill:'#8c6538',stroke:'#634528','stroke-width':'.04'}));
-    for(let i=0;i<4;i++){let a=i*Math.PI/2+.3,q=polar(a,d*.07);g.appendChild(S('ellipse',{cx:q[0],cy:q[1],rx:d*.025,ry:d*.04,fill:'#e1a23a',stroke:'#b06f24','stroke-width':'.025'}))}
-    return g;
-  }
-
-  // Blueberry: low, compact shrub rather than a tree crown.
-  if(n.includes('blueberry')){
-    path(blobPath(d*.44,18,10),'#397a43','#235d31',.08,1);
-    for(let i=0;i<18;i++){let a=rnd(i+30)*Math.PI*2,r=Math.sqrt(rnd(i+50))*d*.32,q=polar(a,r);
-      g.appendChild(S('ellipse',{cx:q[0],cy:q[1],rx:d*.055,ry:d*.035,fill:i%3?'#63a054':'#82b36a',transform:`rotate(${Math.round(a*180/Math.PI)} ${q[0]} ${q[1]})`}));
-    }
-    for(let i=0;i<10;i++){let a=rnd(i+80)*Math.PI*2,r=Math.sqrt(rnd(i+100))*d*.30,q=polar(a,r);g.appendChild(S('circle',{cx:q[0],cy:q[1],r:Math.max(.045,d*.016),fill:'#3f4f83',stroke:'#28355f','stroke-width':'.025'}))}
-    return g;
-  }
-
-  let pal=['#3f7f3f','#57924a','#70a65a','#2f6b35'];
-  let outline='#23592e',lobes=20;
-  if(n.includes('mango')){pal=['#1f5a2d','#2e7135','#448640','#5a9848'];outline='#174723';lobes=24}
-  else if(n.includes('atemoya')||n.includes('cherilata')){pal=['#4e8547','#68a057','#80b267','#3b743d'];outline='#315f34';lobes=17}
-  else if(n.includes('guava')){pal=['#448246','#61a057','#7bb36b','#34703b'];outline='#285d32';lobes=18}
-  else if(n.includes('mamey')){pal=['#245d31','#34733a','#4b8844','#1d4e29'];outline='#153f22';lobes=22}
-  else if(n.includes('sapote')){pal=['#306d39','#498448','#659b56','#275f33'];outline='#204e2b';lobes=20}
-
-  // One continuous scalloped crown silhouette — not a collection of circles.
-  path(blobPath(d*.49,lobes,5),pal[0],outline,Math.max(.07,d*.012),1);
-  // broad painted shadow/highlight masses contained visually inside crown
-  for(let i=0;i<7;i++){
-    let a=rnd(i+120)*Math.PI*2,r=Math.sqrt(rnd(i+140))*d*.24,q=polar(a,r);
-    let rx=d*(.10+.045*rnd(i+160)), ry=rx*(.65+.2*rnd(i+180));
-    g.appendChild(S('ellipse',{cx:q[0],cy:q[1],rx,ry,fill:pal[(i%3)+1],opacity:'.72',transform:`rotate(${Math.round(rnd(i+200)*180)} ${q[0]} ${q[1]})`}));
-  }
-  // hand-drawn leaf strokes for recognizable foliage texture
-  for(let i=0;i<20;i++){
-    let a=rnd(i+220)*Math.PI*2,r=Math.sqrt(rnd(i+250))*d*.34,q=polar(a,r),ang=rnd(i+280)*Math.PI*2,L=d*(.045+.018*rnd(i+300));
-    let x2=q[0]+Math.cos(ang)*L,y2=q[1]+Math.sin(ang)*L;
-    vein(q[0],q[1],x2,y2,'#b7cf88',Math.max(.025,d*.004),.45);
-  }
-  // trunk/branch glimpses at center
-  for(let i=0;i<4;i++){let a=i*Math.PI/2+.45+rnd(i+330)*.5,q=polar(a,d*.12);vein(p.x,p.y,q[0],q[1],'#75563a',Math.max(.045,d*.008),.58)}
-  g.appendChild(S('circle',{cx:p.x,cy:p.y,r:Math.max(.09,d*.018),fill:'#735238',opacity:'.8'}));
-
-  let fruit=n.includes('mango')?'#f0b13e':n.includes('guava')?'#b9d56b':n.includes('mamey')?'#a86e3c':(n.includes('atemoya')||n.includes('cherilata'))?'#a7c978':null;
-  if(fruit)for(let i=0;i<Math.min(8,Math.max(2,Math.round(d/3)));i++){let a=rnd(i+350)*Math.PI*2,r=Math.sqrt(rnd(i+370))*d*.30,q=polar(a,r);g.appendChild(S('ellipse',{cx:q[0],cy:q[1],rx:Math.max(.05,d*.012),ry:Math.max(.065,d*.016),fill:fruit,stroke:'#6d6a37','stroke-width':'.02'}))}
-  return g;
+ let g=S('g'),seed=[...p.name].reduce((a,c)=>a+c.charCodeAt(0),0);
+ function rnd(i){let x=Math.sin(seed+i*73.17)*9182.37;return x-Math.floor(x)}
+ function q(a,r){return[p.x+Math.cos(a)*r,p.y+Math.sin(a)*r]}
+ function crown(rad,bumps,phase){
+   let pts=[]; for(let i=0;i<bumps;i++){let a=-Math.PI/2+i*2*Math.PI/bumps,rr=rad*(.86+.14*rnd(i+phase));pts.push(q(a,rr))}
+   let d0="";for(let i=0;i<bumps;i++){let a=pts[(i-1+bumps)%bumps],b=pts[i],c=pts[(i+1)%bumps];
+     let sx=(a[0]+b[0])/2,sy=(a[1]+b[1])/2,ex=(b[0]+c[0])/2,ey=(b[1]+c[1])/2;
+     if(i===0)d0+=`M${sx} ${sy}`; d0+=` Q${b[0]} ${b[1]} ${ex} ${ey}`}
+   return d0+" Z"
+ }
+ function add(tag,a){let z=S(tag,a);g.appendChild(z);return z}
+ let n=p.name.toLowerCase();
+ if(n.includes('papaya')){
+   for(let i=0;i<11;i++){let a=i*2*Math.PI/11-Math.PI/2,tip=q(a,d*.48),l=q(a-.24,d*.27),r=q(a+.24,d*.27);
+     add('path',{d:`M${p.x} ${p.y} Q${l[0]} ${l[1]} ${tip[0]} ${tip[1]} Q${r[0]} ${r[1]} ${p.x} ${p.y}Z`,fill:i%2?'#62a84e':'#4b9342',stroke:'#245d32','stroke-width':'.075','stroke-linejoin':'round'})}
+   add('circle',{cx:p.x,cy:p.y,r:Math.max(.12,d*.03),fill:'#a56f38',stroke:'#694321','stroke-width':'.05'});return g
+ }
+ if(n.includes('blueberry')){
+   add('path',{d:crown(d*.48,18,20),fill:'#4f934b',stroke:'#245f32','stroke-width':'.09'});
+   for(let i=0;i<14;i++){let a=rnd(i+40)*Math.PI*2,r=Math.sqrt(rnd(i+60))*d*.34,z=q(a,r);
+     add('ellipse',{cx:z[0],cy:z[1],rx:d*.06,ry:d*.035,fill:i%2?'#79b466':'#65a455',stroke:'#3f7e42','stroke-width':'.02'})}
+   for(let i=0;i<8;i++){let a=rnd(i+90)*Math.PI*2,r=Math.sqrt(rnd(i+110))*d*.28,z=q(a,r);add('circle',{cx:z[0],cy:z[1],r:Math.max(.045,d*.014),fill:'#45558d',stroke:'#263665','stroke-width':'.025'})}
+   return g
+ }
+ let fill='#4f9848',edge='#245f31',inner='#72ad5b';
+ if(n.includes('mango')){fill='#347f3b';edge='#174e29';inner='#55a04a'}
+ else if(n.includes('atemoya')||n.includes('cherilata')){fill='#67a456';edge='#356e39';inner='#8abd6c'}
+ else if(n.includes('guava')){fill='#5a9f50';edge='#2d6938';inner='#7db76a'}
+ else if(n.includes('mamey')){fill='#34783a';edge='#1c5129';inner='#579447'}
+ else if(n.includes('sapote')){fill='#478a44';edge='#245d32';inner='#69a456'}
+ add('path',{d:crown(d*.49,n.includes('mango')?26:20,5),fill,stroke:edge,'stroke-width':Math.max(.08,d*.012),'stroke-linejoin':'round'});
+ // flat cartoon foliage tufts, deliberately no transparency/shadows
+ for(let i=0;i<9;i++){let a=rnd(i+130)*Math.PI*2,r=Math.sqrt(rnd(i+150))*d*.28,z=q(a,r),rr=d*(.055+.025*rnd(i+170));
+   add('circle',{cx:z[0],cy:z[1],r:rr,fill:inner,stroke:edge,'stroke-width':'.025'})}
+ // leaf marks
+ for(let i=0;i<12;i++){let a=rnd(i+190)*Math.PI*2,r=Math.sqrt(rnd(i+210))*d*.32,z=q(a,r),ang=rnd(i+230)*Math.PI;
+   add('ellipse',{cx:z[0],cy:z[1],rx:d*.028,ry:d*.012,fill:'#a9cf78',transform:`rotate(${ang*180/Math.PI} ${z[0]} ${z[1]})`})}
+ return g
 }
 function drawShape(p){
- let col=C[p.cat]||C.blue,d=size(p);
+ let col=C[p.cat]||C.blue,d=size(p),n=p.name.toLowerCase(),rot=Number(p.angle)||0;
+ let target=sh;
+ if((p.shape==='trellis'||p.shape==='patch')&&rot){let rg=S('g',{transform:`rotate(${rot} ${p.x} ${p.y})`});sh.appendChild(rg);target=rg}
  if(p.shape==='tree'){
-   if(view==='visual')sh.appendChild(visualTree(p,col,d));
-   else sh.appendChild(S('circle',{cx:p.x,cy:p.y,r:d/2,fill:col,stroke:col,class:'canopy'}))
- } else if(p.shape==='trellis'){
+   if(view==='visual')target.appendChild(visualTree(p,col,d));
+   else target.appendChild(S('circle',{cx:p.x,cy:p.y,r:d/2,fill:col,stroke:col,class:'canopy'}))
+ }else if(p.shape==='trellis'){
    let w=d,h=Math.max(1,Math.min(2.5,d*.18));
-   if(view==='planner') sh.appendChild(S('rect',{x:p.x-w/2,y:p.y-h/2,width:w,height:h,rx:.25,fill:col,stroke:col,class:'patch'}));
-   else {
-     // fence/trellis seen from above
-     sh.appendChild(S('line',{x1:p.x-w/2,y1:p.y,x2:p.x+w/2,y2:p.y,stroke:'#73746b','stroke-width':'.22'}));
-     for(let x=p.x-w/2;x<=p.x+w/2+.01;x+=1){
-       sh.appendChild(S('circle',{cx:x,cy:p.y,r:.12,fill:'#777b74'}));
-       sh.appendChild(S('ellipse',{cx:x,cy:p.y-.28,rx:.42,ry:.22,fill:'#3f8144',opacity:'.95'}));
-       sh.appendChild(S('ellipse',{cx:x+.22,cy:p.y+.18,rx:.45,ry:.23,fill:'#5b9951',opacity:'.92'}));
-     }
-     if(/^Dragon Fruit/.test(p.name)){
-       for(let x=p.x-w/2+.35;x<p.x+w/2;x+=1.1){
-         sh.appendChild(S('path',{d:`M${x} ${p.y-.65} Q${x-.25} ${p.y} ${x+.15} ${p.y+.7}`,fill:'none',stroke:'#3f8d54','stroke-width':'.25','stroke-linecap':'round'}));
-       }
-     }
+   if(view==='planner'){target.appendChild(S('rect',{x:p.x-w/2,y:p.y-h/2,width:w,height:h,rx:.25,fill:col,stroke:col,class:'patch'}))}
+   else if(n.includes('dragon fruit')){
+     let g=S('g');
+     // umbrella-style dragon fruit canopy: circular footprint around the central trellis
+     g.appendChild(S('circle',{cx:p.x,cy:p.y,r:d*.46,fill:'#4f9d4d',stroke:'#276c37','stroke-width':'.09'}));
+     g.appendChild(S('circle',{cx:p.x,cy:p.y,r:Math.max(.15,d*.045),fill:'#8d6b48',stroke:'#5d422d','stroke-width':'.06'}));
+     for(let i=0;i<10;i++){let a=i*2*Math.PI/10,rr=d*(.34+(i%3)*.035),x2=p.x+Math.cos(a)*rr,y2=p.y+Math.sin(a)*rr;
+       let bend=a+(i%2?.22:-.22),mx=p.x+Math.cos(bend)*rr*.55,my=p.y+Math.sin(bend)*rr*.55;
+       g.appendChild(S('path',{d:`M${p.x} ${p.y} Q${mx} ${my} ${x2} ${y2}`,fill:'none',stroke:i%2?'#55a851':'#3d9347','stroke-width':Math.max(.18,d*.055),'stroke-linecap':'round','stroke-linejoin':'round'}));
+       g.appendChild(S('circle',{cx:x2,cy:y2,r:Math.max(.07,d*.022),fill:'#ee5b92',stroke:'#a93267','stroke-width':'.035'}))
+     }target.appendChild(g)
+   }else{
+     // passion-fruit fence/trellis, flat top-down
+     let g=S('g');
+     g.appendChild(S('rect',{x:p.x-w/2,y:p.y-.13,width:w,height:.26,fill:'#8a755d',stroke:'#594b3d','stroke-width':'.05'}));
+     for(let i=0;i<Math.max(8,Math.round(w*2));i++){let x=p.x-w*.45+(i/(Math.max(7,Math.round(w*2)-1)))*w*.9,yy=p.y+(i%2?-.22:.22);
+       g.appendChild(S('ellipse',{cx:x,cy:yy,rx:.32,ry:.18,fill:i%3?'#4c9948':'#69ad58',stroke:'#2e7139','stroke-width':'.04',transform:`rotate(${i%2?25:-25} ${x} ${yy})`}));
+       if(i%4===0)g.appendChild(S('circle',{cx:x+.08,cy:yy,r:.065,fill:'#8a58a4',stroke:'#5c3974','stroke-width':'.025'}))
+     }target.appendChild(g)
    }
- } else {
+ }else{
    let w=d,h=Math.max(2,d*.55);
-   if(view==='planner') sh.appendChild(S('rect',{x:p.x-w/2,y:p.y-h/2,width:w,height:h,rx:.5,fill:col,stroke:col,class:'patch'}));
-   else {
-     // dense sugarcane / crop patch from above
-     sh.appendChild(S('ellipse',{cx:p.x+.12,cy:p.y+.18,rx:w*.49,ry:h*.48,fill:'#234d2d',opacity:'.18'}));
-     for(let i=0;i<Math.max(10,Math.round(w*5));i++){
-       let fx=p.x-w*.43+(i%7)/6*w*.86, fy=p.y-h*.38+(Math.floor(i/7)%5)/4*h*.76;
-       let a=(i%5-2)*.18, len=h*(.28+(i%3)*.04);
-       sh.appendChild(S('path',{d:`M${fx} ${fy} q${Math.sin(a)*len} ${-len*.65} ${Math.sin(a)*len*.5} ${-len}`,fill:'none',stroke:i%2?'#5d9845':'#78aa50','stroke-width':'.13','stroke-linecap':'round'}));
-     }
-   }
+   if(view==='planner')target.appendChild(S('rect',{x:p.x-w/2,y:p.y-h/2,width:w,height:h,rx:.5,fill:col,stroke:col,class:'patch'}));
+   else{let g=S('g');for(let i=0;i<Math.max(12,Math.round(w*5));i++){let x=p.x-w*.42+(i%7)/6*w*.84,y=p.y-h*.34+(Math.floor(i/7)%4)/3*h*.68;
+     g.appendChild(S('path',{d:`M${x} ${y+.25} Q${x-.12} ${y} ${x+.03} ${y-.42}`,fill:'none',stroke:i%2?'#67a94e':'#478f43','stroke-width':'.13','stroke-linecap':'round'}))}target.appendChild(g)}
  }
 }
 function drawLabels(){clear(ll);if(!labels)return;let placed=[];data.forEach((p,i)=>{let lines=[p.name,...(p.varieties||[])].slice(0,5),w=Math.max(...lines.map(s=>s.length))*0.34+1,h=.72*lines.length+.25,cands=[[p.x+.7,p.y-.7],[p.x+.7,p.y+1.1],[p.x-w-.7,p.y-.7],[p.x-w-.7,p.y+1.1],[p.x-w/2,p.y-size(p)/2-1]],pos=cands.find(([x,y])=>!placed.some(b=>x<b.x+b.w&&x+w>b.x&&y<b.y+b.h&&y+h>b.y))||[p.x+.7,p.y-.7+(i%3)*.8],[x,y]=pos;placed.push({x,y,w,h});ll.appendChild(S('line',{x1:p.x,y1:p.y,x2:x,y2:y+.25,class:'leader'}));ll.appendChild(S('rect',{x,y:y-.48,width:w,height:h,rx:.18,class:'lblbox'}));lines.forEach((s,j)=>{let t=S('text',{x:x+.22,y:y+j*.7,class:'lbl'});t.textContent=s;ll.appendChild(t)})})}
